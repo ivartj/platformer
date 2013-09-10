@@ -1,4 +1,5 @@
 #include "video.h"
+#include "log.h"
 #include <SDL.h>
 #include <stdlib.h>
 
@@ -21,6 +22,7 @@ int sdl_init(void)
 	if(err)
 		return seterrmsg("SDL failed to initialize: %s", SDL_GetError());
 	atexit(SDL_Quit);
+	sdl_initialized = 1;
 
 	return 0;
 }

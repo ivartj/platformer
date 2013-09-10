@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <getopt.h>
+#include "log.h"
+#include "video.h"
 
 void usage(FILE *out)
 {
