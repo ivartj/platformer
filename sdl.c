@@ -64,6 +64,7 @@ void lockcanvas(void)
 	video->pix = canvas->pixels;
 	video->w = canvas->w;
 	video->h = canvas->h;
+	video->private = canvas;
 }
 
 void unlockcanvas(void)
