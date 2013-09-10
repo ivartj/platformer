@@ -1,5 +1,6 @@
 #include "video.h"
 #include "log.h"
+#include "event.h"
 #include <SDL.h>
 #include <stdlib.h>
 
@@ -159,3 +160,29 @@ void blitxymask(image *src, image *dest, int x, int y, image *mask)
 {
 	// TODO
 }
+
+int event_wait(event *ev)
+{
+	SDL_Event sdlev;
+	int ok;
+
+	ok = SDL_WaitEvent(&sdlev);
+	if(!ok)
+		return 0;
+
+	switch(sdlev.type) {
+	case SDL_KEYDOWN:
+		{
+			kbevent *kbev;
+			kbev = &(ev->kb);
+			kbev->code = sdlev.key.keysym.scancode;
+			kbev->mod = sdlev.key.keysym.mod;
+			kbev->sym = sdlev.key.keysym.sym;
+		}
+		break;
+	case SDL_QUIT:
+		quit();
+	}
+}
+
+int event_poll(event *ev);

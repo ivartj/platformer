@@ -4,6 +4,7 @@
 #include <getopt.h>
 #include "log.h"
 #include "video.h"
+#include "main.h"
 
 void usage(FILE *out)
 {
@@ -47,9 +48,19 @@ void init(void)
 		error("Failed to initialize video: %s", geterrmsg());
 }
 
+void fail(void)
+{
+	exit(EXIT_FAILURE);
+}
+
+void quit(void)
+{
+	exit(EXIT_SUCCESS);
+}
+
 int main(int argc, char *argv[])
 {
 	parseargs(argc, argv);
 	init();
-	exit(EXIT_SUCCESS);
+	quit();
 }

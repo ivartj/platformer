@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <stdarg.h>
 #include "log.h"
+#include "main.h"
 
 static void vwarning(const char *fmt, va_list ap);
 static char errmsg[256] = { 0 };
@@ -35,7 +36,7 @@ void error(const char *fmt, ...)
 	va_start(ap, fmt);
 	vwarning(fmt, ap);
 	va_end(ap);
-	exit(EXIT_FAILURE);
+	fail();
 }
 
 void warning(const char *fmt, ...)
