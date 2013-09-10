@@ -99,6 +99,12 @@ image *image_create(int w, int h)
 	return img;
 }
 
+void image_destroy(image *img)
+{
+	SDL_FreeSurface((SDL_Surface *)(img->private));
+	free(img);
+}
+
 void blit(image *src, image *dest)
 {
 	SDL_BlitSurface((SDL_Surface *)(src->private), NULL, (SDL_Surface *)(dest->private), NULL);
