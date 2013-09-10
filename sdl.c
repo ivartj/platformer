@@ -85,39 +85,74 @@ void video_update(void)
 image *image_create(int w, int h)
 {
 	image *img;
+	SDL_Surface *surf;
 
 	img = calloc(1, sizeof(image));
-	img->private = SDL_CreateRGBSurface(SDL_HWSURFACE, w, h, 32,
+	img->private = surf = SDL_CreateRGBSurface(SDL_HWSURFACE, w, h, 32,
 		0x00FF0000,
 		0x0000FF00,
 		0x000000FF,
 		0xFF000000);
 	img->w = w;
 	img->h = h;
-	img->pix = ((SDL_Surface *)(img->private))->pixels;
+	if(SDL_MUSTLOCK(surf));
+		SDL_LockSurface(surf);
+	img->pix = surf->pixels;
 
 	return img;
 }
 
 void image_destroy(image *img)
 {
-	SDL_FreeSurface((SDL_Surface *)(img->private));
+	SDL_Surface *surf;
+
+	surf = (SDL_Surface *)(img->private);
+	if(SDL_MUSTLOCK(surf))
+		SDL_UnlockSurface(surf);
+	SDL_FreeSurface(surf);
 	free(img);
 }
 
 void blit(image *src, image *dest)
 {
+	SDL_Surface *sdlsrc, *sdldest;
+
+	sdlsrc = (SDL_Surface *)(src->private);
+	sdldest = (SDL_Surface *)(dest->private);
+	if(SDL_MUSTLOCK(sdlsrc))
+		SDL_UnlockSurface(sdlsrc);
+	if(SDL_MUSTLOCK(sdldest))
+		SDL_UnlockSurface(sdldest);
+
 	SDL_BlitSurface((SDL_Surface *)(src->private), NULL, (SDL_Surface *)(dest->private), NULL);
+
+	if(SDL_MUSTLOCK(sdlsrc))
+		SDL_LockSurface(sdlsrc);
+	if(SDL_MUSTLOCK(sdldest))
+		SDL_LockSurface(sdldest);
 }
 
 void blitxy(image *src, image *dest, int x, int y)
 {
 	SDL_Rect rect = { 0 };
+	SDL_Surface *sdlsrc, *sdldest;
 
 	rect.x = x;
 	rect.y = y;
 
+	sdlsrc = (SDL_Surface *)(src->private);
+	sdldest = (SDL_Surface *)(dest->private);
+	if(SDL_MUSTLOCK(sdlsrc))
+		SDL_UnlockSurface(sdlsrc);
+	if(SDL_MUSTLOCK(sdldest))
+		SDL_UnlockSurface(sdldest);
+
 	SDL_BlitSurface((SDL_Surface *)(src->private), NULL, (SDL_Surface *)(dest->private), &rect);
+
+	if(SDL_MUSTLOCK(sdlsrc))
+		SDL_LockSurface(sdlsrc);
+	if(SDL_MUSTLOCK(sdldest))
+		SDL_LockSurface(sdldest);
 }
 
 void blitxymask(image *src, image *dest, int x, int y, image *mask)
