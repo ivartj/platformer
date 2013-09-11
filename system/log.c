@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <stdarg.h>
+#include <string.h>
 #include "log.h"
-#include "main.h"
 
 static void vwarning(const char *fmt, va_list ap);
 static char errmsg[256] = { 0 };
@@ -15,9 +15,14 @@ char *geterrmsg(void)
 int seterrmsg(const char *fmt, ...)
 {
 	va_list ap;
+	int len;
+	/* vsnprintf with overlapping strings is undefined
+	 * so we have a bakmsg to write before errmsg */
+	char bakmsg[sizeof(errmsg)] = { 0 };
 
 	va_start(ap, fmt);
-	vsnprintf(errmsg, sizeof(errmsg), fmt, ap);
+	len = vsnprintf(bakmsg, sizeof(errmsg), fmt, ap);
+	memcpy(errmsg, bakmsg, len + 1);
 	va_end(ap);
 
 	return -1;
@@ -36,7 +41,7 @@ void error(const char *fmt, ...)
 	va_start(ap, fmt);
 	vwarning(fmt, ap);
 	va_end(ap);
-	fail();
+	exit(EXIT_FAILURE);
 }
 
 void warning(const char *fmt, ...)

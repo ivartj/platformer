@@ -3,6 +3,7 @@
 #include "event.h"
 #include <SDL.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 static void lockcanvas(void);
 static void unlockcanvas(void);
@@ -74,7 +75,7 @@ void unlockcanvas(void)
 		SDL_UnlockSurface(canvas);
 }
 
-/* update display with date in video image */
+/* update display with data in video image */
 void video_update(void)
 {
 	unlockcanvas();
@@ -96,9 +97,21 @@ image *image_create(int w, int h)
 		0xFF000000);
 	img->w = w;
 	img->h = h;
-	if(SDL_MUSTLOCK(surf));
+	if(SDL_MUSTLOCK(surf))
 		SDL_LockSurface(surf);
 	img->pix = surf->pixels;
+
+	return img;
+}
+
+image *mask_create(int w, int h)
+{
+	image *img;
+	SDL_Surface *sdlsurf;
+
+	img = image_create(w, h);
+	sdlsurf = (SDL_Surface *)(img->private);
+	SDL_SetAlpha(sdlsurf, SDL_RLEACCEL | SDL_SRCALPHA, 255);
 
 	return img;
 }
@@ -114,9 +127,10 @@ void image_destroy(image *img)
 	free(img);
 }
 
-void blit(image *src, image *dest)
+int blit(image *src, image *dest)
 {
 	SDL_Surface *sdlsrc, *sdldest;
+	int err;
 
 	sdlsrc = (SDL_Surface *)(src->private);
 	sdldest = (SDL_Surface *)(dest->private);
@@ -125,18 +139,23 @@ void blit(image *src, image *dest)
 	if(SDL_MUSTLOCK(sdldest))
 		SDL_UnlockSurface(sdldest);
 
-	SDL_BlitSurface((SDL_Surface *)(src->private), NULL, (SDL_Surface *)(dest->private), NULL);
+	err = SDL_BlitSurface((SDL_Surface *)(src->private), NULL, (SDL_Surface *)(dest->private), NULL);
+	if(err)
+		err = seterrmsg("SDL_BlitSurface: %s", SDL_GetError());
 
 	if(SDL_MUSTLOCK(sdlsrc))
 		SDL_LockSurface(sdlsrc);
 	if(SDL_MUSTLOCK(sdldest))
 		SDL_LockSurface(sdldest);
+
+	return err;
 }
 
-void blitxy(image *src, image *dest, int x, int y)
+int blitxy(image *src, image *dest, int x, int y)
 {
 	SDL_Rect rect = { 0 };
 	SDL_Surface *sdlsrc, *sdldest;
+	int err;
 
 	rect.x = x;
 	rect.y = y;
@@ -148,17 +167,22 @@ void blitxy(image *src, image *dest, int x, int y)
 	if(SDL_MUSTLOCK(sdldest))
 		SDL_UnlockSurface(sdldest);
 
-	SDL_BlitSurface((SDL_Surface *)(src->private), NULL, (SDL_Surface *)(dest->private), &rect);
+	err = SDL_BlitSurface((SDL_Surface *)(src->private), NULL, (SDL_Surface *)(dest->private), &rect);
+	if(err)
+		err = seterrmsg("SDL_BlitSurface: %s", SDL_GetError());
 
 	if(SDL_MUSTLOCK(sdlsrc))
 		SDL_LockSurface(sdlsrc);
 	if(SDL_MUSTLOCK(sdldest))
 		SDL_LockSurface(sdldest);
+
+	return err;
 }
 
-void blitxymask(image *src, image *dest, int x, int y, image *mask)
+int blitxymask(image *src, image *dest, int x, int y, image *mask)
 {
 	// TODO
+	return seterrmsg("Unimplemented method blitxymask");
 }
 
 int event_wait(event *ev)
@@ -181,8 +205,10 @@ int event_wait(event *ev)
 		}
 		break;
 	case SDL_QUIT:
-		quit();
+		exit(EXIT_SUCCESS);
 	}
+
+	return 1;
 }
 
 int event_poll(event *ev);

@@ -1,4 +1,4 @@
-LIBNAME = container
+LIBNAME = system
 
 SRCS = $(wildcard *.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))

@@ -12,9 +12,10 @@ struct _image {
 };
 
 image *image_create(int w, int h);
+image *mask_create(int w, int h);
 
-void blit(image *src, image *dest);
-void blitxy(image *src, image *dest, int x, int y);
-void blitxymask(image *src, image *dest, int x, int y, image *mask);
+int blit(image *src, image *dest);
+int blitxy(image *src, image *dest, int x, int y);
+int blitxymask(image *src, image *dest, int x, int y, image *mask);
 
 #endif

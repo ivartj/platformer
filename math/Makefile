@@ -1,4 +1,4 @@
-LIBNAME = container
+LIBNAME = math
 
 SRCS = $(wildcard *.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
