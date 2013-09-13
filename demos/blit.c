@@ -8,6 +8,7 @@ int main(int argc, char *argv[])
 {
 	video_init(640, 480);
 
+	puts("1");
 	int x, y;
 	image *img = image_create(100, 100);
 	int i, j = 0;
@@ -15,6 +16,7 @@ int main(int argc, char *argv[])
 	for(y = 0; y < img->h; y++)
 		img->pix[x + y * img->w] = (0x11111100 * (y % 16));
 	double r;
+	puts("2");
 	image *mask = image_create(100, 100);
 	for(x = 0; x < mask->w; x++)
 	for(y = 0; y < mask->h; y++) {
@@ -24,6 +26,7 @@ int main(int argc, char *argv[])
 		r = exp(-pow(r, 2) / pow(1.0 / 3.0, 2));
 		mask->pix[x + y * mask->w] = rgba(1, 1, 1, r);
 	}
+	puts("3");
 
 	event ev;
 	int err;
@@ -38,6 +41,7 @@ int main(int argc, char *argv[])
 			warning("Blit failed: %s", geterrmsg());
 		video_update();
 	}
+	puts("4");
 
 	exit(EXIT_SUCCESS);
 }

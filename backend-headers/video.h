@@ -1,7 +1,6 @@
 #ifndef VIDEO_H
 #define VIDEO_H
 
-#include <SDL.h>
 #include "image.h"
 
 extern image *video;

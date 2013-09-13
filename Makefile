@@ -4,7 +4,7 @@ SRCS = $(wildcard *.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
 OBJLIBS = $(patsubst %,lib%.a,$(LIBDIRS))
 
-CFLAGS = $(shell sdl-config --cflags) $(patsubst %,-I $(shell pwd)/%,$(LIBDIRS)) -I $(shell pwd)/backend-headers
+CFLAGS = $(shell sdl-config --cflags) -include SDL.h $(patsubst %,-I $(shell pwd)/%,$(LIBDIRS)) -I $(shell pwd)/backend-headers
 LIBS = $(shell sdl-config --libs) $(patsubst %,$(shell pwd)/lib%.a,${LIBDIRS})
 
 all: platformer demos
@@ -26,5 +26,7 @@ lib%.a: %
 	$(MAKE) CFLAGS="${CFLAGS}" -C $<
 	cp $</$@ .
 
-demos: $(OBJLIBS)
-	$(MAKE) CFLAGS="${CFLAGS}" LIBS="${LIBS}" -C $@
+demos: demos-all
+
+demos-all: $(OBJLIBS)
+	$(MAKE) CFLAGS="${CFLAGS}" LIBS="${LIBS}" -C demos

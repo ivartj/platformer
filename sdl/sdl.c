@@ -189,24 +189,48 @@ int event_wait(event *ev)
 {
 	SDL_Event sdlev;
 	int ok;
+	int cont;
 
-	ok = SDL_WaitEvent(&sdlev);
-	if(!ok)
-		return 0;
+	do {
+		cont = 0;
 
-	switch(sdlev.type) {
-	case SDL_KEYDOWN:
-		{
-			kbevent *kbev;
-			kbev = &(ev->kb);
-			kbev->code = sdlev.key.keysym.scancode;
-			kbev->mod = sdlev.key.keysym.mod;
-			kbev->sym = sdlev.key.keysym.sym;
+		ok = SDL_WaitEvent(&sdlev);
+		if(!ok)
+			return 0;
+
+		switch(sdlev.type) {
+		case SDL_KEYDOWN:
+			{
+				keyevent *kbev;
+				kbev = &(ev->key);
+				kbev->code = sdlev.key.keysym.scancode;
+				kbev->mod = sdlev.key.keysym.mod;
+				kbev->sym = sdlev.key.keysym.sym;
+			}
+			break;
+		case SDL_MOUSEMOTION:
+		case SDL_MOUSEBUTTONDOWN:
+			{
+				mouseevent *mouseev;
+				mouseev = &(ev->mouse);
+				mouseev->type = EVENT_MOUSE;
+				if(sdlev.type == SDL_MOUSEBUTTONDOWN) {
+					mouseev->state = sdlev.button.state;
+					mouseev->x = sdlev.button.x;
+					mouseev->y = sdlev.button.y;
+				} else {
+					mouseev->state = sdlev.motion.state;
+					mouseev->x = sdlev.motion.x;
+					mouseev->y = sdlev.motion.y;
+				}
+			}
+			break;
+		case SDL_QUIT:
+			exit(EXIT_SUCCESS);
+		default:
+			cont = 1;
 		}
-		break;
-	case SDL_QUIT:
-		exit(EXIT_SUCCESS);
-	}
+	} while(cont);
 
 	return 1;
 }
