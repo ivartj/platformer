@@ -106,7 +106,7 @@ void markset_clear(markset *set)
 	}
 }
 
-int markset_iterate(markset *set, iter *i)
+int markset_iter(markset *set, iter *i)
 {
 	return dlist_iter(set->dl, i);
 }
