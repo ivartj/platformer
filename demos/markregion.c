@@ -12,152 +12,13 @@
 #include <color.h>
 #include <event.h>
 #include <dlist.h>
-
-typedef struct _rect rect;
-
-struct _rect {
-	int x, y, w, h;
-};
+#include <markset.h>
 
 int ox, oy;
 int mx, my;
 int drag;
 image *canvas;
-dlist *marks = NULL;
-
-static void mark(rect *r);
-static void add(rect *r);
-
-int overlap(rect *m, rect *r)
-{
-	if(r->x >= m->x + m->w)
-		return 0;
-	if(m->x >= r->x + r->w)
-		return 0;
-	if(r->y >= m->y + m->h)
-		return 0;
-	if(m->y >= r->y + r->h)
-		return 0;
-	return 1;
-}
-
-int within(rect *m, rect *r)
-{
-	if(m->x > r->x)
-		return 0;
-	if(m->x + m->w < r->x + r->w)
-		return 0;
-	if(m->y > r->y)
-		return 0;
-	if(m->y + m->h < r->y + r->h)
-		return 0;
-	return 1;
-}
-
-void split(rect *a, rect *c)
-{
-	rect *t, *tm;
-	rect *b, *bm;
-	rect nt, nm, nb;
-
-	if(a->y < c->y) {
-		t = a;
-		tm = c;
-	} else {
-		t = c;
-		tm = a;
-	}
-
-	if(a->y + a->h > c->y + c->h) {
-		b = a;
-		bm = c;
-	} else {
-		b = c;
-		bm = a;
-	}
-
-	nt.x = t->x;
-	nt.y = t->y;
-	nt.w = t->w;
-	nt.h = tm->y - t->y;
-
-	nb.x = b->x;
-	nb.y = bm->y + bm->h;
-	nb.w = b->w;
-	nb.h = b->y + b->h - nb.y;
-
-	nm.y = tm->y;
-	nm.h = nb.y - nm.y;
-	nm.x = a->x < c->x ? a->x : c->x;
-	nm.w = (a->x + a->w > c->x + c->w ? a->x + a->w : c->x + c->w) - nm.x;
-
-	if(nt.w == nm.w && nt.x == nm.x) {
-		nm.h += nt.h;
-		nm.y = nt.y;
-		nt.w = 0;
-	}
-	if(nm.w == nb.w && nm.x == nb.x) {
-		nm.h += nb.h;
-		nb.w = 0;
-	}
-	mark(&nt);
-	mark(&nb);
-	mark(&nm);
-}
-
-void mark(rect *r)
-{
-	rect *m;
-	dnode *dn;
-
-	if(r->w == 0 || r->h == 0)
-		return;
-
-	for(dn = dlist_first(marks); dn != NULL; dn = dnode_next(dn)) {
-		m = (rect *)dnode_data(dn);
-		if(within(m, r))
-			return;
-		if(overlap(m, r)) {
-			dnode_rem(dn);
-			split(m, r);
-			free(m);
-			return;
-		}
-	}
-
-	add(r);
-}
-
-void add(rect *r)
-{
-	rect *m;
-	m = calloc(1, sizeof(rect));
-	*m = *r;
-	dlist_add_first(marks, m);
-}
-
-rect p2rect(int x, int y, int x2, int y2)
-{
-	rect r;
-
-	if(x < x2) {
-		r.x = x;
-		r.w = x2 - x;
-	} else {
-		r.x = x2;
-		r.w = x - x2;
-	}
-
-	if(y < y2) {
-		r.y = y;
-		r.h = y2 - y;
-	} else {
-		r.y = y2;
-		r.h = y - y2;
-	}
-
-	return r;
-}
+markset *set;
 
 void dot(int x, int y, color c)
 {
@@ -196,10 +57,12 @@ void drawrect(rect *r)
 void drawmarks(void)
 {
 	rect *r;
-	dnode *i;
+	iter i;
+	int n = 0;
 
-	for(i = dlist_first(marks); i != NULL; i = dnode_next(i)) {
-		r = (rect *)dnode_data(i);
+	markset_iter(set, &i);
+	while(iterate(&i, (data *)(void **)(&r))) {
+		n++;
 		drawrect(r);
 	}
 }
@@ -217,7 +80,7 @@ void redraw(void)
 	if(!drag)
 		return;
 
-	r = p2rect(ox, oy, mx, my);
+	r = ps2rect(ox, oy, mx, my);
 	drawrect(&r);
 }
 
@@ -225,11 +88,13 @@ void eventloop(void)
 {
 	mouseevent ev;
 	rect r;
+	int update;
 
 	ox = oy = mx = my = drag = 0;
 
 	while(event_wait((event *)&ev))
 	if(ev.type == EVENT_MOUSE) {
+		update = 0;
 		mx = ev.x;
 		my = ev.y;
 		if(!drag && ev.state) {
@@ -237,13 +102,17 @@ void eventloop(void)
 			oy = my;
 			drag = 1;
 		}
+		if(drag)
+			update = 1;
 		if(drag && !ev.state) {
 			drag = 0;
-			r = p2rect(ox, oy, mx, my);
-			mark(&r);
+			r = ps2rect(ox, oy, mx, my);
+			markset_add(set, &r);
 		}
-		redraw();
-		video_update();
+		if(update) {
+			redraw();
+			video_update();
+		}
 	}
 }
 
@@ -256,7 +125,7 @@ int main(int argc, char *argv[])
 		error("Failed to initialize video: %s", geterrmsg());
 	canvas = image_create(video->w, video->h);
 
-	marks = dlist_create();
+	set = markset_create();
 
 	eventloop();
 	exit(EXIT_SUCCESS);
