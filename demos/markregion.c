@@ -41,11 +41,24 @@ int overlap(rect *m, rect *r)
 	return 1;
 }
 
+int within(rect *m, rect *r)
+{
+	if(m->x > r->x)
+		return 0;
+	if(m->x + m->w < r->x + r->w)
+		return 0;
+	if(m->y > r->y)
+		return 0;
+	if(m->y + m->h < r->y + r->h)
+		return 0;
+	return 1;
+}
+
 void split(rect *a, rect *c)
 {
 	rect *t, *tm;
 	rect *b, *bm;
-	rect *nt, *nm, *nb;
+	rect nt, nm, nb;
 
 	if(a->y < c->y) {
 		t = a;
@@ -63,28 +76,33 @@ void split(rect *a, rect *c)
 		bm = a;
 	}
 
-	nt = calloc(1, sizeof(rect));
-	nm = calloc(1, sizeof(rect));
-	nb = calloc(1, sizeof(rect));
+	nt.x = t->x;
+	nt.y = t->y;
+	nt.w = t->w;
+	nt.h = tm->y - t->y;
 
-	nt->x = t->x;
-	nt->y = t->y;
-	nt->w = t->w;
-	nt->h = tm->y - t->y;
+	nb.x = b->x;
+	nb.y = bm->y + bm->h;
+	nb.w = b->w;
+	nb.h = b->y + b->h - nb.y;
 
-	nb->x = b->x;
-	nb->y = bm->y + bm->h;
-	nb->w = b->w;
-	nb->h = b->y + b->h - nb->y;
+	nm.y = tm->y;
+	nm.h = nb.y - nm.y;
+	nm.x = a->x < c->x ? a->x : c->x;
+	nm.w = (a->x + a->w > c->x + c->w ? a->x + a->w : c->x + c->w) - nm.x;
 
-	nm->y = tm->y;
-	nm->h = nb->y - nm->y;
-	nm->x = a->x < c->x ? a->x : c->x;
-	nm->w = (a->x + a->w > c->x + c->w ? a->x + a->w : c->x + c->w) - nm->x;
-
-	mark(nt);
-	mark(nb);
-	mark(nm);
+	if(nt.w == nm.w && nt.x == nm.x) {
+		nm.h += nt.h;
+		nm.y = nt.y;
+		nt.w = 0;
+	}
+	if(nm.w == nb.w && nm.x == nb.x) {
+		nm.h += nb.h;
+		nb.w = 0;
+	}
+	mark(&nt);
+	mark(&nb);
+	mark(&nm);
 }
 
 void mark(rect *r)
@@ -92,8 +110,13 @@ void mark(rect *r)
 	rect *m;
 	dnode *dn;
 
+	if(r->w == 0 || r->h == 0)
+		return;
+
 	for(dn = dlist_first(marks); dn != NULL; dn = dnode_next(dn)) {
 		m = (rect *)dnode_data(dn);
+		if(within(m, r))
+			return;
 		if(overlap(m, r)) {
 			dnode_rem(dn);
 			split(m, r);
