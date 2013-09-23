@@ -6,6 +6,7 @@ struct _markset {
 };
 
 static void split(markset *set, rect *a, rect *c);
+static void cut(markset *set, rect *a, rect *c);
 
 markset *markset_create(void)
 {
@@ -22,7 +23,7 @@ void markset_add(markset *set, rect *r)
 	rect *m;
 	dnode *dn;
 
-	if(r->w == 0 || r->h == 0)
+	if(r->w <= 0 || r->h <= 0)
 		return;
 
 	for(dn = dlist_first(set->dl); dn != NULL; dn = dnode_next(dn)) {
@@ -97,16 +98,84 @@ void split(markset *set, rect *a, rect *c)
 	markset_add(set, &nm);
 }
 
-void markset_clear(markset *set)
+void markset_cut(markset *set, rect *r)
 {
+	rect *m;
 	dnode *dn;
-	while((dn = dlist_first(set->dl)) != NULL) {
-		free(dnode_data(dn).v);
-		dnode_rem(dn);
+	dnode *tmp;
+	dnode *next;
+
+	if(r->w <= 0 || r->h <= 0)
+		return;
+
+	dn = dlist_first(set->dl);
+	while(dn != NULL) {
+		m = (rect *)(dnode_data(dn).v);
+		next = dnode_next(dn);
+		if(rect_iswithin(r, m)) {
+			dnode_rem(dn);
+			free(m);
+		}
+		dn = next;
 	}
+
+	dn = dlist_first(set->dl);
+	while(dn != NULL) {
+		m = (rect *)(dnode_data(dn).v);
+		next = dnode_next(dn);
+		if(rect_isoverlap(m, r)) {
+			dnode_rem(dn);
+			cut(set, m, r);
+			free(m);
+		}
+		dn = next;
+	}
+}
+
+void cut(markset *set, rect *m, rect *c)
+{
+	/* sections of m cut from c */
+	rect t; /* top */
+	rect l; /* left */
+	rect r; /* right */
+	rect b; /* bottom */
+
+	t.x = m->x;
+	t.y = m->y;
+	t.h = c->y - m->y;
+	t.w = m->w;
+
+	l.x = m->x;
+	l.y = m->y > c->y ? m->y : c->y;
+	l.w = c->x - m->x;
+	l.h = (m->y + m->h < c->y + c->h ? m->y + m->h : c->y + c->h) - l.y;
+
+	r.x = c->x + c->w;
+	r.y = l.y;
+	r.w = m->x + m->w - c->x - c->w;
+	r.h = l.h;
+
+	b.y = c->y + c->h;
+	b.h = m->y + m->h - c->y - c->h;
+	b.x = m->x;
+	b.w = m->w;
+
+	markset_add(set, &t);
+	markset_add(set, &l);
+	markset_add(set, &r);
+	markset_add(set, &b);
 }
 
 int markset_iter(markset *set, iter *i)
 {
 	return dlist_iter(set->dl, i);
 }
+
+void markset_clear(markset *set)
+{
+	dnode *dn;
+
+	while((dn = dlist_first(set->dl)) != NULL)
+		dnode_rem(dn);
+}
+

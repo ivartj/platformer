@@ -4,6 +4,8 @@
 #include <SDL.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <rect.h>
+#include <color.h>
 
 static void lockcanvas(void);
 static void unlockcanvas(void);
@@ -127,6 +129,26 @@ void image_destroy(image *img)
 	free(img);
 }
 
+void image_fill(image *img, rect *r, color c)
+{
+	SDL_Surface *surf;
+	SDL_Rect sdlr;
+
+	sdlr.x = r->x;
+	sdlr.y = r->y;
+	sdlr.w = r->w;
+	sdlr.h = r->h;
+
+	surf = (SDL_Surface *)(img->private);
+	if(SDL_MUSTLOCK(surf))
+		SDL_UnlockSurface(surf);
+
+	SDL_FillRect(surf, &sdlr, c);
+
+	if(SDL_MUSTLOCK(surf))
+		SDL_LockSurface(surf);
+}
+
 int blit(image *src, image *dest)
 {
 	SDL_Surface *sdlsrc, *sdldest;
@@ -179,10 +201,80 @@ int blitxy(image *src, image *dest, int x, int y)
 	return err;
 }
 
+int blitrxy(image *src, rect *r, image *dest, int x, int y)
+{
+	SDL_Rect sdlr = { 0 };
+	SDL_Rect sdlxy = { 0 };
+	SDL_Surface *sdlsrc, *sdldest;
+	int err;
+
+	sdlr.x = r->x;
+	sdlr.y = r->y;
+	sdlr.w = r->w;
+	sdlr.h = r->h;
+	sdlxy.x = x;
+	sdlxy.y = y;
+
+	sdlsrc = (SDL_Surface *)(src->private);
+	sdldest = (SDL_Surface *)(dest->private);
+	if(SDL_MUSTLOCK(sdlsrc))
+		SDL_UnlockSurface(sdlsrc);
+	if(SDL_MUSTLOCK(sdldest))
+		SDL_UnlockSurface(sdldest);
+
+	err = SDL_BlitSurface((SDL_Surface *)(src->private), &sdlr, (SDL_Surface *)(dest->private), &sdlxy);
+	if(err)
+		err = seterrmsg("SDL_BlitSurface: %s", SDL_GetError());
+
+	if(SDL_MUSTLOCK(sdlsrc))
+		SDL_LockSurface(sdlsrc);
+	if(SDL_MUSTLOCK(sdldest))
+		SDL_LockSurface(sdldest);
+
+	return err;
+}
+
 int blitxymask(image *src, image *dest, int x, int y, image *mask)
 {
 	// TODO
 	return seterrmsg("Unimplemented method blitxymask");
+}
+
+static int event_translate(event *ev, SDL_Event *sdlev)
+{
+	switch(sdlev->type) {
+	case SDL_KEYDOWN:
+		{
+			keyevent *kbev;
+			kbev = &(ev->key);
+			kbev->type = EVENT_KEY;
+			kbev->code = sdlev->key.keysym.scancode;
+			kbev->mod = sdlev->key.keysym.mod;
+			kbev->sym = sdlev->key.keysym.sym;
+		}
+		return 0;
+	case SDL_MOUSEMOTION:
+	case SDL_MOUSEBUTTONDOWN:
+		{
+			mouseevent *mouseev;
+			mouseev = &(ev->mouse);
+			mouseev->type = EVENT_MOUSE;
+			if(sdlev->type == SDL_MOUSEBUTTONDOWN) {
+				mouseev->state = sdlev->button.state;
+				mouseev->x = sdlev->button.x;
+				mouseev->y = sdlev->button.y;
+			} else {
+				mouseev->state = sdlev->motion.state;
+				mouseev->x = sdlev->motion.x;
+				mouseev->y = sdlev->motion.y;
+			}
+		}
+		return 0;
+	case SDL_QUIT:
+		exit(EXIT_SUCCESS);
+	default:
+		return 1;
+	}
 }
 
 int event_wait(event *ev)
@@ -198,41 +290,27 @@ int event_wait(event *ev)
 		if(!ok)
 			return 0;
 
-		switch(sdlev.type) {
-		case SDL_KEYDOWN:
-			{
-				keyevent *kbev;
-				kbev = &(ev->key);
-				kbev->code = sdlev.key.keysym.scancode;
-				kbev->mod = sdlev.key.keysym.mod;
-				kbev->sym = sdlev.key.keysym.sym;
-			}
-			break;
-		case SDL_MOUSEMOTION:
-		case SDL_MOUSEBUTTONDOWN:
-			{
-				mouseevent *mouseev;
-				mouseev = &(ev->mouse);
-				mouseev->type = EVENT_MOUSE;
-				if(sdlev.type == SDL_MOUSEBUTTONDOWN) {
-					mouseev->state = sdlev.button.state;
-					mouseev->x = sdlev.button.x;
-					mouseev->y = sdlev.button.y;
-				} else {
-					mouseev->state = sdlev.motion.state;
-					mouseev->x = sdlev.motion.x;
-					mouseev->y = sdlev.motion.y;
-				}
-			}
-			break;
-		case SDL_QUIT:
-			exit(EXIT_SUCCESS);
-		default:
-			cont = 1;
-		}
+		cont = event_translate(ev, &sdlev);
 	} while(cont);
 
 	return 1;
 }
 
-int event_poll(event *ev);
+int event_poll(event *ev)
+{
+	SDL_Event sdlev;
+	int ok;
+	int cont;
+
+	do {
+		cont = 0;
+
+		ok = SDL_PollEvent(&sdlev);
+		if(!ok)
+			return 0;
+
+		cont = event_translate(ev, &sdlev);
+	} while(cont);
+
+	return 1;
+}

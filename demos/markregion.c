@@ -16,6 +16,7 @@
 
 int ox, oy;
 int mx, my;
+int del = 0;
 int drag;
 image *canvas;
 markset *set;
@@ -29,17 +30,17 @@ void dot(int x, int y, color c)
 	canvas->pix[x + y * video->w] = c;
 }
 
-void drawrect(rect *r)
+void drawrect(rect *r, color cc)
 {
 	int i, ix, iy;
-	color c = 0x440000FF;
+	color c = cc | 0x88000000;
 
 	for(i = 0; i < canvas->w * canvas->h; i++)
 		canvas->pix[i] = 0;
 
 	for(ix = r->x; ix < r->x + r->w; ix++)
 	for(iy = r->y; iy < r->y + r->h; iy++)
-		dot(ix, iy, 0x220000FF);
+		dot(ix, iy, cc | 0x44000000);
 
 	for(i = r->x; i < r->x + r->w; i++) {
 		dot(i, r->y, c);
@@ -63,7 +64,7 @@ void drawmarks(void)
 	markset_iter(set, &i);
 	while(iterate(&i, (data *)(void **)(&r))) {
 		n++;
-		drawrect(r);
+		drawrect(r, 0x0000FF);
 	}
 }
 
@@ -81,33 +82,50 @@ void redraw(void)
 		return;
 
 	r = ps2rect(ox, oy, mx, my);
-	drawrect(&r);
+	if(del)
+		drawrect(&r, 0xFF0000);
+	else
+		drawrect(&r, 0x0000FF);
 }
 
 void eventloop(void)
 {
-	mouseevent ev;
+	event ev;
+	mouseevent mev;
 	rect r;
 	int update;
 
 	ox = oy = mx = my = drag = 0;
 
-	while(event_wait((event *)&ev))
-	if(ev.type == EVENT_MOUSE) {
-		update = 0;
-		mx = ev.x;
-		my = ev.y;
-		if(!drag && ev.state) {
-			ox = mx;
-			oy = my;
-			drag = 1;
-		}
-		if(drag)
-			update = 1;
-		if(drag && !ev.state) {
-			drag = 0;
-			r = ps2rect(ox, oy, mx, my);
-			markset_add(set, &r);
+	while(event_wait(&ev)) {
+		switch(ev.type) {
+		case EVENT_MOUSE:
+			mev = ev.mouse;
+			update = 0;
+			mx = mev.x;
+			my = mev.y;
+			if(!drag && mev.state) {
+				ox = mx;
+				oy = my;
+				drag = 1;
+			}
+			if(drag)
+				update = 1;
+			if(drag && !mev.state) {
+				drag = 0;
+				r = ps2rect(ox, oy, mx, my);
+				if(!del)
+					markset_add(set, &r);
+				else
+					markset_cut(set, &r);
+			}
+			break;
+		case EVENT_KEY:
+			if(ev.key.sym == 'd')
+				del = 1;
+			if(ev.key.sym == 'f')
+				del = 0;
+			break;
 		}
 		if(update) {
 			redraw();

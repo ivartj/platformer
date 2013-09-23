@@ -48,3 +48,60 @@ int rect_iswithin(rect *a, rect *b)
 		return 0;
 	return 1;
 }
+
+void rect_overlap(rect *a, rect *b, rect *o)
+{
+	o->x = a->x > b->x ? a->x : b->x;
+	o->y = a->y > b->y ? a->y : b->y;
+	o->w = (a->x + a->w < b->x + b->w ? a->x + a->w : b->x + b->w) - o->x;
+	o->h = (a->y + a->h < b->y + b->h ? a->y + a->h : b->y + b->h) - o->y;
+}
+
+void rect_xor(rect *a, rect *c, rect *t, rect *l, rect *r, rect *b)
+{
+	rect *tmp;
+
+	if(c->y < a->y) {
+		tmp = a;
+		a = c;
+		c = tmp;
+	}
+	
+	t->y = a->y;
+	t->h = c->y - a->y;
+	t->x = a->x;
+	t->w = a->w;
+
+	if(c->y + c->h < a->y + a->h) {
+		tmp = a;
+		a = c;
+		c = tmp;
+	}
+
+	b->y = a->y + a->h;
+	b->h = c->y + c->h - b->y;
+	b->x = c->x;
+	b->w = c->w;
+
+	if(c->x < a->x) {
+		tmp = a;
+		a = c;
+		c = tmp;
+	}
+
+	l->x = a->x;
+	l->w = c->x - a->x;
+	l->y = t->y + t->h;
+	l->h = b->y - l->y;
+
+	if(c->x + c->w < a->x + a->w) {
+		tmp = a;
+		a = c;
+		c = tmp;
+	}
+
+	r->x = a->x + a->w;
+	r->w = c->x + c->w - r->x;
+	r->y = l->y;
+	r->h = l->h;
+}

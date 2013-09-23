@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <getopt.h>
 #include <math.h>
+#include <load.h>
 
 #include "log.h"
 #include "video.h"
@@ -49,6 +50,9 @@ void init(void)
 	err = video_init(640, 480);
 	if(err)
 		error("Failed to initialize video: %s", geterrmsg());
+	err = load_init();
+	if(err)
+		error("Failed to initialize image loading: %s", geterrmsg());
 }
 
 void fail(void)

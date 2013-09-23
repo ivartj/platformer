@@ -1,11 +1,11 @@
-LIBDIRS = container math system sdl gfx scene
+LIBDIRS = container math system sdl gfx scene load
 
 SRCS = $(wildcard *.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))
 OBJLIBS = $(patsubst %,lib%.a,$(LIBDIRS))
 
-CFLAGS = $(shell sdl-config --cflags) -include SDL.h $(patsubst %,-I $(shell pwd)/%,$(LIBDIRS)) -I $(shell pwd)/backend-headers
-LIBS = $(shell sdl-config --libs) $(patsubst %,$(shell pwd)/lib%.a,${LIBDIRS})
+CFLAGS = $(shell sdl-config --cflags) -include SDL.h $(patsubst %,-I $(shell pwd)/%,$(LIBDIRS)) -I $(shell pwd)/backend-headers $(shell pkg-config --cflags libpng) -g
+LIBS = -lfreeimage $(shell sdl-config --libs) $(shell pkg-config --libs libpng) $(patsubst %,$(shell pwd)/lib%.a,${LIBDIRS}) -g
 
 all: platformer demos
 
