@@ -253,6 +253,12 @@ object *filter_circ(int x, int y, double r, color (*draw)(color c))
 	d->bot.w = rat * 2;
 	d->bot.h = r - rat;
 
+	/* margin */
+	d->top.x -= 1;
+	d->top.w += 2;
+	d->bot.x -= 1;
+	d->bot.w += 2;
+
 	d->mtop = mapset_add(maps, &(d->top), (data)(void *)o);
 	d->mbot = mapset_add(maps, &(d->bot), (data)(void *)o);
 	d->mcen = mapset_add(maps, &(d->cen), (data)(void *)o);
@@ -358,12 +364,14 @@ void redraw(void)
 {
 	gfx *x;
 	rect *r;
+	data d;
 	iter i;
 
 	x = gfx_create(video);
 
 	markset_iter(marks, &i);
-	while(iterate(&i, (data *)(void **)&r)) {
+	while(iterate(&i, &d)) {
+		r = d.v;
 		draw(x, r);
 	}
 	markset_clear(marks);
@@ -380,14 +388,16 @@ void eventloop(void)
 	while(event_wait(&ev)) {
 		update = 0;
 
-		switch(ev.type) {
-		case EVENT_KEY:
-			break;
-		case EVENT_MOUSE:
-			circ_move(xor, ev.mouse.x, ev.mouse.y);
-			update = 1;
-			break;
-		}
+		do {
+			switch(ev.type) {
+			case EVENT_KEY:
+				break;
+			case EVENT_MOUSE:
+				circ_move(xor, ev.mouse.x, ev.mouse.y);
+				update = 1;
+				break;
+			}
+		} while(event_poll(&ev));
 
 		if(update)
 			redraw();
@@ -420,6 +430,7 @@ int main(int argc, char *argv[])
 
 	sprite(0, 0, "chooyu.png");
 
+	redraw();
 	eventloop();
 
 	return 0;
