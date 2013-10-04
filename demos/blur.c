@@ -1,44 +1,65 @@
 #include <video.h>
+#include <color.h>
 #include <log.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <markset.h>
 #include <event.h>
+#include <thread.h>
+#include <markset.h>
+#include <mapset.h>
 #include <gfx.h>
-#include <rect.h>
 
+typedef struct _graphic graphic;
+typedef struct _circle circle;
+typedef void (*drawfn)(gfx *x, rect *r, void *data);
+
+struct _graphic {
+	void *data;
+	drawfn draw;
+};
+
+struct _circle {
+	int x, y;
+	double r;
+	color c;
+};
+
+mapset *maps = NULL;
 markset *marks = NULL;
-rect view = { 0 };
 
-void draw(gfx *g, rect *r)
+void draw(gfx *x, rect *r)
 {
 
 }
 
 void redraw(void)
 {
-	gfx *g;
+	gfx *x;
+	rect r;
+	data d;
 	iter i;
-	rect *m;
 
-	g = gfx_create(video);
+	x = gfx_create(video);
+
 	markset_iter(marks, &i);
-	while(iterate(&i, (data *)(void **)&m))
-		draw(g, m);
+	while(iterate(&i, &r)) {
+		draw(x, &r);
+	}
 	markset_clear(marks);
-	gfx_destroy(g);
+
+	gfx_destroy(x);
 	video_update();
 }
 
 void eventloop(void)
 {
 	event ev;
+	int update;
 
-	while(event_wait(&ev))
-	switch(ev.type) {
-	case EVENT_MOUSE:
+	for(;;) {
+		while(event_poll(&ev)) {
+
+		}
 		redraw();
-		break;
+		thread_sleep(30);
 	}
 }
 
@@ -48,15 +69,11 @@ int main(int argc, char *argv[])
 
 	err = video_init(640, 480);
 	if(err)
-		error("Failed to initialize video: %s", geterrmsg());
+		error("video_init: %s", geterrmsg());
 
-	view.w = video->w;
-	view.h = video->h;
-
+	maps = mapset_create();
 	marks = markset_create();
-	markset_add(marks, &view);
 
 	eventloop();
-
-	exit(EXIT_SUCCESS);
+	return 0;
 }

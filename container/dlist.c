@@ -1,7 +1,9 @@
 #include "dlist.h"
+#include <log.h>
 
 struct _dnode {
-	data data;
+	void *data;
+	size_t datalen;
 	dnode *next;
 	dnode *prev;
 	dlist *list;
@@ -14,12 +16,20 @@ struct _dlist {
 
 dlist *dlist_create(void)
 {
-	return (dlist *)calloc(1, sizeof(dlist));
+	dlist *dl;
+
+	dl = calloc(1, sizeof(dlist));
+
+	return dl;
 }
 
-data dnode_data(dnode *dn)
+void _dnode_data(dnode *dn, void *data, size_t datalen)
 {
-	return dn->data;
+	if(datalen != dn->datalen)
+		warning("dnode_data: mismatch between data type sizes stored and requested");
+	if(datalen > dn->datalen)
+		datalen = dn->datalen;
+	memcpy(data, dn->data, datalen);
 }
 
 dnode *dnode_next(dnode *dn)
@@ -42,12 +52,8 @@ dnode *dlist_first(dlist *dl)
 	return dl->first;
 }
 
-data dnode_rem(dnode *dn)
+void dnode_rem(dnode *dn)
 {
-	data data;
-
-	data = dn->data;
-
 	if(dn->prev != NULL)
 		dn->prev->next = dn->next;
 	else
@@ -56,17 +62,18 @@ data dnode_rem(dnode *dn)
 		dn->next->prev = dn->prev;
 	else
 		dn->list->last = dn->prev;
+	free(dn->data);
 	free(dn);
-
-	return data;
 }
 
-dnode *dlist_add_last(dlist *dl, data data)
+dnode *_dlist_add_last(dlist *dl, void *data, size_t datalen)
 {
 	dnode *dn;
 
 	dn = calloc(1, sizeof(dnode));
-	dn->data = data;
+	dn->data = malloc(datalen);
+	memcpy(dn->data, data, datalen);
+	dn->datalen = datalen;
 	dn->list = dl;
 	if(dl->last != NULL) {
 		dl->last->next = dn;
@@ -77,12 +84,14 @@ dnode *dlist_add_last(dlist *dl, data data)
 	return dn;
 }
 
-dnode *dlist_add_first(dlist *dl, data data)
+dnode *_dlist_add_first(dlist *dl, void *data, size_t datalen)
 {
 	dnode *dn;
 
 	dn = calloc(1, sizeof(dnode));
-	dn->data = data;
+	dn->data = malloc(datalen);
+	memcpy(dn->data, data, datalen);
+	dn->datalen = datalen;
 	dn->list = dl;
 	if(dl->first != NULL) {
 		dl->first->prev = dn;
@@ -93,7 +102,7 @@ dnode *dlist_add_first(dlist *dl, data data)
 	return dn;
 }
 
-static int dnode_iter_next(iter *i, data *retval);
+static int dnode_iter_next(iter *i, void *retval);
 
 int dlist_iter(dlist *dl, iter *i)
 {
@@ -102,13 +111,13 @@ int dlist_iter(dlist *dl, iter *i)
 	return dl->first != NULL;
 }
 
-int dnode_iter_next(iter *i, data *retval)
+int dnode_iter_next(iter *i, void *retval)
 {
 	dnode *dn;
 	dn = (dnode *)(i->data.v);
 	if(dn == NULL)
 		return 0;
 	i->data.v = dn->next;
-	*retval = dn->data;
+	memcpy(retval, dn->data, dn->datalen);
 	return 1;
 }

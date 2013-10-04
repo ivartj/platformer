@@ -18,32 +18,29 @@ markset *markset_create(void)
 	return set;
 }
 
-void markset_add(markset *set, rect *r)
+void markset_add(markset *set, rect r)
 {
-	rect *m;
+	rect m;
 	dnode *dn;
 
-	if(r->w <= 0 || r->h <= 0)
+	if(r.w <= 0 || r.h <= 0)
 		return;
 
 	for(dn = dlist_first(set->dl); dn != NULL; dn = dnode_next(dn)) {
-		m = (rect *)(dnode_data(dn).v);
-		if(rect_iswithin(m, r))
+		dnode_data(dn, &m);
+		if(rect_iswithin(&m, &r))
 			return;
 	}
 	for(dn = dlist_first(set->dl); dn != NULL; dn = dnode_next(dn)) {
-		m = (rect *)(dnode_data(dn).v);
-		if(rect_isoverlap(m, r)) {
+		dnode_data(dn, &m);
+		if(rect_isoverlap(&m, &r)) {
 			dnode_rem(dn);
-			split(set, m, r);
-			free(m);
+			split(set, &m, &r);
 			return;
 		}
 	}
 
-	m = calloc(1, sizeof(rect));
-	*m = *r;
-	dlist_add_first(set->dl, (data)(void*)m);
+	dlist_add_first(set->dl, r);
 }
 
 void split(markset *set, rect *a, rect *c)
@@ -93,14 +90,14 @@ void split(markset *set, rect *a, rect *c)
 		nb.w = 0;
 	}
 
-	markset_add(set, &nt);
-	markset_add(set, &nb);
-	markset_add(set, &nm);
+	markset_add(set, nt);
+	markset_add(set, nb);
+	markset_add(set, nm);
 }
 
 void markset_cut(markset *set, rect *r)
 {
-	rect *m;
+	rect m;
 	dnode *dn;
 	dnode *tmp;
 	dnode *next;
@@ -110,23 +107,21 @@ void markset_cut(markset *set, rect *r)
 
 	dn = dlist_first(set->dl);
 	while(dn != NULL) {
-		m = (rect *)(dnode_data(dn).v);
+		dnode_data(dn, &m);
 		next = dnode_next(dn);
-		if(rect_iswithin(r, m)) {
+		if(rect_iswithin(r, &m)) {
 			dnode_rem(dn);
-			free(m);
 		}
 		dn = next;
 	}
 
 	dn = dlist_first(set->dl);
 	while(dn != NULL) {
-		m = (rect *)(dnode_data(dn).v);
+		dnode_data(dn, &m);
 		next = dnode_next(dn);
-		if(rect_isoverlap(m, r)) {
+		if(rect_isoverlap(&m, r)) {
 			dnode_rem(dn);
-			cut(set, m, r);
-			free(m);
+			cut(set, &m, r);
 		}
 		dn = next;
 	}
@@ -160,10 +155,10 @@ void cut(markset *set, rect *m, rect *c)
 	b.x = m->x;
 	b.w = m->w;
 
-	markset_add(set, &t);
-	markset_add(set, &l);
-	markset_add(set, &r);
-	markset_add(set, &b);
+	markset_add(set, t);
+	markset_add(set, l);
+	markset_add(set, r);
+	markset_add(set, b);
 }
 
 int markset_iter(markset *set, iter *i)

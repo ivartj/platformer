@@ -82,10 +82,10 @@ void filter_rect_move(object *o, int x, int y)
 	r.x = x;
 	r.y = y;
 	rect_xor(map_rect(o->m), &r, &top, &lef, &rig, &bot);
-	markset_add(marks, &top);
-	markset_add(marks, &lef);
-	markset_add(marks, &rig);
-	markset_add(marks, &bot);
+	markset_add(marks, top);
+	markset_add(marks, lef);
+	markset_add(marks, rig);
+	markset_add(marks, bot);
 	map_setrect(o->m, &r);
 }
 
@@ -169,10 +169,10 @@ void circ_move(object *o, int x, int y)
 
 
 	d = (circ_data *)(o->d.v);
-	markset_add(marks, &(d->top));
-	markset_add(marks, &(d->bot));
-	markset_add(marks, &(d->lef));
-	markset_add(marks, &(d->rig));
+	markset_add(marks, d->top);
+	markset_add(marks, d->bot);
+	markset_add(marks, d->lef);
+	markset_add(marks, d->rig);
 
 	memcpy(&cen, &(d->cen), sizeof(cen));
 
@@ -199,16 +199,16 @@ void circ_move(object *o, int x, int y)
 	d->x = x;
 	d->y = y;
 
-	markset_add(marks, &(d->top));
-	markset_add(marks, &(d->bot));
-	markset_add(marks, &(d->lef));
-	markset_add(marks, &(d->rig));
+	markset_add(marks, d->top);
+	markset_add(marks, d->bot);
+	markset_add(marks, d->lef);
+	markset_add(marks, d->rig);
 
 	rect_xor(&cen, &(d->cen), &ctop, &clef, &crig, &cbot);
-	markset_add(marks, &ctop);
-	markset_add(marks, &clef);
-	markset_add(marks, &crig);
-	markset_add(marks, &cbot);
+	markset_add(marks, ctop);
+	markset_add(marks, clef);
+	markset_add(marks, crig);
+	markset_add(marks, cbot);
 }
 
 object *filter_circ(int x, int y, double r, color (*draw)(color c))
@@ -258,17 +258,22 @@ object *filter_circ(int x, int y, double r, color (*draw)(color c))
 	d->top.w += 2;
 	d->bot.x -= 1;
 	d->bot.w += 2;
+	d->cen.x += 1;
+	d->cen.w -= 2;
+	d->lef.w += 1;
+	d->rig.x -= 1;
+	d->rig.w += 1;
 
-	d->mtop = mapset_add(maps, &(d->top), (data)(void *)o);
-	d->mbot = mapset_add(maps, &(d->bot), (data)(void *)o);
-	d->mcen = mapset_add(maps, &(d->cen), (data)(void *)o);
-	d->mlef = mapset_add(maps, &(d->lef), (data)(void *)o);
-	d->mrig = mapset_add(maps, &(d->rig), (data)(void *)o);
-	markset_add(marks, &(d->top));
-	markset_add(marks, &(d->bot));
-	markset_add(marks, &(d->cen));
-	markset_add(marks, &(d->lef));
-	markset_add(marks, &(d->rig));
+	d->mtop = mapset_add(maps, &(d->top), o);
+	d->mbot = mapset_add(maps, &(d->bot), o);
+	d->mcen = mapset_add(maps, &(d->cen), o);
+	d->mlef = mapset_add(maps, &(d->lef), o);
+	d->mrig = mapset_add(maps, &(d->rig), o);
+	markset_add(marks, d->top);
+	markset_add(marks, d->bot);
+	markset_add(marks, d->cen);
+	markset_add(marks, d->lef);
+	markset_add(marks, d->rig);
 
 	o->d = (data)(void *)d;
 
@@ -300,7 +305,7 @@ object *sprite(int x, int y, const char *path)
 	o->d = (data)(void *)img;
 	o->draw = sprite_draw;
 	o->move = sprite_move;
-	o->m = mapset_add(maps, &r, (data)(void *)o);
+	o->m = mapset_add(maps, &r, o);
 	return o;
 }
 
@@ -317,7 +322,7 @@ object *filter_rect(int x, int y, int w, int h, color (*draw)(color c))
 	o->draw = rect_draw;
 	o->d.v = (void *)draw;
 	o->move = filter_rect_move;
-	o->m = mapset_add(maps, &r, (data)(void *)o);
+	o->m = mapset_add(maps, &r, o);
 	return o;
 }
 
@@ -355,7 +360,7 @@ void draw(gfx *x, rect *r)
 	mapset_iter_overlap(maps, &i, r);
 	while(iterate(&i, (data *)(void **)&m)) {
 		rect_overlap(map_rect(m), r, &o);
-		obj = (object *)map_data(m).v;
+		map_data(m, &obj);
 		obj->draw(obj, x, &o);
 	}
 }
@@ -363,16 +368,15 @@ void draw(gfx *x, rect *r)
 void redraw(void)
 {
 	gfx *x;
-	rect *r;
+	rect r;
 	data d;
 	iter i;
 
 	x = gfx_create(video);
 
 	markset_iter(marks, &i);
-	while(iterate(&i, &d)) {
-		r = d.v;
-		draw(x, r);
+	while(iterate(&i, &r)) {
+		draw(x, &r);
 	}
 	markset_clear(marks);
 
@@ -424,8 +428,8 @@ int main(int argc, char *argv[])
 	view.w = video->w;
 	view.h = video->h;
 
-	markset_add(marks, &view);
-	xor = filter_circ(200, 200, 60, xor_color);
+	markset_add(marks, view);
+	xor = filter_circ(200, 200, 150, xor_color);
 	filter_rect(0, 0, 320, 480, xor_color);
 
 	sprite(0, 0, "chooyu.png");

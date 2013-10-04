@@ -11,7 +11,8 @@ struct _mapset {
 struct _map {
 	dnode *node;
 	rect r;
-	data data;
+	void *data;
+	size_t datalen;
 };
 
 mapset *mapset_create(void)
@@ -24,14 +25,16 @@ mapset *mapset_create(void)
 	return set;
 }
 
-map *mapset_add(mapset *set, rect *r, data d)
+map *_mapset_add(mapset *set, rect *r, void *data, size_t datalen)
 {
 	map *m;
 
 	m = calloc(1, sizeof(map));
 	m->r = *r;
-	memcpy(&(m->data), &d, sizeof(d)); /* syntax error when using equal sign */
-	m->node = dlist_add_first(set->maps, (data)(void *)m);
+	m->data = malloc(datalen);
+	memcpy(m->data, data, datalen);
+	m->datalen = datalen;
+	m->node = dlist_add_first(set->maps, m);
 
 	return m;
 }
@@ -42,13 +45,13 @@ struct _overlap {
 	dnode *node;
 };
 
-static int overlap_next(iter *i, data *d)
+static int overlap_next(iter *i, map **d)
 {
 	map *c;
 	overlap *o;
 	o = (overlap *)(i->data.v);
 	while(o->node != NULL) {
-		c = (map *)(dnode_data(o->node).v);
+		dnode_data(o->node, &c);
 		if(rect_isoverlap(&(c->r), &(o->r)))
 			break;
 		o->node = dnode_next(o->node);
@@ -58,7 +61,7 @@ static int overlap_next(iter *i, data *d)
 		return 0;
 	}
 	o->node = dnode_next(o->node);
-	*d = (data)(void *)c;
+	*d = c;
 
 	return 1;
 }
@@ -68,7 +71,7 @@ void mapset_iter_overlap(mapset *set, iter *i, rect *r)
 	overlap *o;
 
 	o = calloc(1, sizeof(overlap));
-	i->next = overlap_next;
+	i->next = (iter_fn)overlap_next;
 	o->r = *r;
 	o->node = dlist_first(set->maps);
 	i->data = (data)(void *)o;
@@ -79,9 +82,12 @@ void map_setrect(map *m, rect *r)
 	m->r = *r;
 }
 
-void map_setdata(map *m, data data)
+void _map_setdata(map *m, void *data, size_t datalen)
 {
-	m->data = data;
+	free(m->data);
+	m->data = malloc(datalen);
+	memcpy(m->data, data, datalen);
+	m->datalen = datalen;
 }
 
 rect *map_rect(map *m)
@@ -89,9 +95,9 @@ rect *map_rect(map *m)
 	return &(m->r);
 }
 
-data map_data(map *m)
+void map_data(map *m, void *data)
 {
-	return m->data;
+	memcpy(data, m->data, m->datalen);
 }
 
 void map_destroy(map *m)

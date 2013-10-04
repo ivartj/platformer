@@ -1,4 +1,4 @@
-LIBDIRS = system gfx load scene container math sdl 
+LIBDIRS = system gfx load scene container math thread sdl
 
 SRCS = $(wildcard *.c)
 OBJS = $(patsubst %.c,%.o,$(SRCS))

@@ -6,12 +6,13 @@
 #include <data.h>
 
 typedef struct _iter iter;
+typedef int (*iter_fn)(iter *i, void *retval);
 
 struct _iter {
 	data data;
-	int (*next)(iter *i, data *retval);
+	iter_fn next;
 };
 
-int iterate(iter *i, data *retval);
+int iterate(iter *i, void *retval);
 
 #endif

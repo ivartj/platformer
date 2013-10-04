@@ -57,14 +57,14 @@ void drawrect(rect *r, color cc)
 
 void drawmarks(void)
 {
-	rect *r;
+	rect r;
 	iter i;
 	int n = 0;
 
 	markset_iter(set, &i);
-	while(iterate(&i, (data *)(void **)(&r))) {
+	while(iterate(&i, &r)) {
 		n++;
-		drawrect(r, 0x0000FF);
+		drawrect(&r, 0x0000FF);
 	}
 }
 
@@ -115,7 +115,7 @@ void eventloop(void)
 				drag = 0;
 				r = ps2rect(ox, oy, mx, my);
 				if(!del)
-					markset_add(set, &r);
+					markset_add(set, r);
 				else
 					markset_cut(set, &r);
 			}
